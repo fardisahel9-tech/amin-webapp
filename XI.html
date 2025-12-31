@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>امین</title>
+  <!-- favicon (inline SVG) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20128%20128'%3E%3Ccircle%20cx='64'%20cy='64'%20r='60'%20fill='%23ffd700'/%3E%3Ctext%20x='50%25'%20y='56%25'%20text-anchor='middle'%20dominant-baseline='central'%20font-family='Arial,%20sans-serif'%20font-size='34'%20fill='%23000'%3E%D8%A7%D9%85%DB%8C%D9%86%3C/text%3E%3C/svg%3E">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { margin: 0; font-family: sans-serif; background: #0e0e1a; color: white; height: 100vh; overflow: hidden; }
+    .container { max-width: 480px; margin: 0 auto; height: 100vh; display: flex; flex-direction: column; position: relative; }
+    .header { padding: 12px 15px; text-align: center; background: #1a1a2e; border-bottom: 1px solid #333; z-index: 5; }
+    .app-title { font-size: 20px; font-weight: 800; color: #ffd700; margin-bottom: 6px; }
+    .balance { font-size: 28px; font-weight: bold; margin: 6px 0; }
+    .level { font-size: 18px; color: #ffd700; }
+    .main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: visible; }
+    .coin {
+      width: 220px; height: 220px; background: radial-gradient(#ffd700, #ffaa00);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-weight: bold; box-shadow: 0 10px 30px rgba(255,215,0,0.5);
+      user-select: none; cursor: pointer; transition: transform 0.12s, opacity 0.12s;
+      outline: none; position: relative; z-index: 3;
+      animation: float 3.5s ease-in-out infinite;
+    }
+    .coin-inner { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .emoji { font-size: 64px; line-height: 1; }
+    .logo {
+      margin-top: 6px;
+      font-size: 20px;
+      font-weight: 900;
+      color: #2b1700;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.28), 0 2px 6px rgba(0,0,0,0.35);
+      letter-spacing: 1px;
+    }
+    .coin.pop { animation: pop 260ms ease forwards; }
+    .coin:active { transform: scale(0.95); }
+    .coin[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+    @keyframes float {
+      0% { transform: translateY(0) }
+      50% { transform: translateY(-8px) }
+      100% { transform: translateY(0) }
+    }
+    @keyframes pop {
+      0% { transform: scale(1); filter: drop-shadow(0 8px 20px rgba(255,215,0,0.3)); }
+      50% { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+    .stats { margin-top: 20px; text-align: center; z-index: 2; }
+    .stats div { margin: 8px 0; font-size: 18px; }
+    .energy-bar { width: 80%; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin: 15px 0; }
+    .energy-fill { height: 100%; width: 100%; background: linear-gradient(to right, #00ff00, #ffff00); transition: width 0.3s; }
+    .bottom-nav {
+      display: flex; background: #1a1a2e; border-top: 1px solid #333; padding: 10px 0; z-index: 5;
+    }
+    .nav-item {
+      flex: 1; text-align: center; padding: 10px; cursor: pointer;
+    }
+    .nav-item.active { color: #ffd700; }
+    .nav-item span { display: block; font-size: 12px; margin-top: 5px; }
+    /* particles container */
+    .particles { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: visible; z-index: 4; }
+    .particle {
+      position: absolute; width: 28px; height: 28px; font-size: 20px; will-change: transform, opacity;
+      transform-origin: center center; opacity: 1;
+      transition: transform 700ms cubic-bezier(.2,.8,.2,1), opacity 700ms linear;
+    }
+    /* confetti */
+    .confetti { position: absolute; width: 10px; height: 16px; opacity: 1; z-index: 6; transform-origin: center; border-radius: 2px; }
+    @keyframes confettiFall {
+      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(540deg); opacity: 0; }
+    }
+    /* level up overlay */
+    .levelup {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.45); z-index: 7; color: #fff; font-size: 22px; font-weight: 700; pointer-events: none;
+      opacity: 0; transition: opacity 240ms ease;
+    }
+    .levelup.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="app-title">امین</div>
+      <div class="level">سطح <span id="level">1</span> - مدیر صرافی</div>
+      <div class="balance" id="balance">0</div>
+    </div>
+
+    <div class="main">
+      <div class="coin" id="coin" role="button" tabindex="0" aria-label="تپ برای کسب سکه" aria-disabled="false">
+        <div class="coin-inner">
+          <div class="emoji">🐹</div>
+          <div class="logo">امین</div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div>سود در ساعت: <span id="profitPerHour">100</span> کوین</div>
+        <div>انرژی:</div>
+        <div class="energy-bar" aria-hidden="true"><div class="energy-fill" id="energyFill"></div></div>
+        <div id="energyText">5000 / 5000</div>
+      </div>
+
+      <div class="particles" id="particles" aria-hidden="true"></div>
+      <div class="levelup" id="levelup">سطح افزایش یافت!</div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active"><span>🏠</span><span>خانه</span></div>
+      <div class="nav-item" onclick="alert('بخش Mine در راهه!')"><span>⛏️</span><span>Mine</span></div>
+      <div class="nav-item" onclick="alert('دوستات رو دعوت کن!')"><span>👥</span><span>Friends</span></div>
+      <div class="nav-item" onclick="alert('ایردراپ به زودی!')"><span>🎁</span><span>Earn</span></div>
+    </div>
+  </div>
+
+  <script>
+    // پارامترها و حالت اولیه
+    let coins = 0;
+    let energy = 5000;
+    let maxEnergy = 5000;
+    let level = 1;
+    let profitPerHour = 100;
+    let coinsPerTap = 1;
+    let energyPerTap = 1;
+    const energyRegenPerSecond = 1;
+    const fmt = new Intl.NumberFormat('fa-IR');
+
+    // صوت (WebAudio)
+    let audioCtx = null;
+    let masterGain = null;
+    function ensureAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.12; // کل ولوم قابل تنظیم
+        masterGain.connect(audioCtx.destination);
+      } catch (e) {
+        console.warn('WebAudio unsupported', e);
+        audioCtx = null;
+      }
+    }
+    function playTone(freq, type='sine', duration=0.08, volume=1.0) {
+      if (!audioCtx) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      g.gain.value = volume;
+      o.connect(g);
+      g.connect(masterGain);
+      const now = audioCtx.currentTime;
+      o.start(now);
+      g.gain.setValueAtTime(volume, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      o.stop(now + duration + 0.02);
+    }
+    function playClickSound() {
+      ensureAudio();
+      if (!audioCtx) return;
+      playTone(900, 'sine', 0.05, 1.0);
+      setTimeout(() => playTone(1200, 'sine', 0.04, 0.6), 60);
+    }
+    function playSuccessSound() {
+      ensureAudio();
+      if (!audioCtx) return;
+      playTone(760, 'sine', 0.12, 1.0);
+      setTimeout(() => playTone(1020, 'sine', 0.10, 0.9), 120);
+    }
+    function playLowEnergySound() {
+      ensureAudio();
+      if (!audioCtx) return;
+      playTone(220, 'sine', 0.12, 0.9);
+    }
+
+    // ذخیره/خواندن امن و محاسبهٔ آفلاین
+    const now = Date.now();
+    try {
+      const raw = localStorage.getItem('hamsterData');
+      if (raw) {
+        const data = JSON.parse(raw);
+        coins = data.coins ?? coins;
+        energy = data.energy ?? energy;
+        level = data.level ?? level;
+        profitPerHour = data.profitPerHour ?? profitPerHour;
+        if (data.lastTimestamp) {
+          const elapsedMs = now - data.lastTimestamp;
+          if (elapsedMs > 0) {
+            const elapsedSec = Math.floor(elapsedMs / 1000);
+            const earned = (profitPerHour / 3600) * elapsedSec;
+            coins += earned;
+            energy += Math.floor(energyRegenPerSecond * elapsedSec);
+            if (energy > maxEnergy) energy = maxEnergy;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('خطا در خواندن localStorage:', e);
+    }
+    function saveState() {
+      const payload = { coins, energy, level, profitPerHour, lastTimestamp: Date.now() };
+      try { localStorage.setItem('hamsterData', JSON.stringify(payload)); } catch (e) { console.warn('نوشتن localStorage', e); }
+    }
+
+    // نمایش
+    function updateDisplay() {
+      document.getElementById('balance').textContent = fmt.format(Math.floor(coins));
+      document.getElementById('level').textContent = level;
+      document.getElementById('profitPerHour').textContent = fmt.format(profitPerHour);
+      document.getElementById('energyText').textContent = `${fmt.format(energy)} / ${fmt.format(maxEnergy)}`;
+      document.getElementById('energyFill').style.width = `${(energy / maxEnergy) * 100}%`;
+      const coinEl = document.getElementById('coin');
+      const disabled = energy < energyPerTap;
+      coinEl.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      coinEl.style.pointerEvents = 'auto';
+      saveState();
+    }
+
+    // particle burst
+    function spawnParticles(x, y, count = 12) {
+      const container = document.getElementById('particles');
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.textContent = i % 3 === 0 ? '🪙' : (i % 2 === 0 ? '✨' : '💫');
+        container.appendChild(p);
+        const angle = (Math.random() * Math.PI * 2);
+        const distance = 60 + Math.random() * 90;
+        const destX = Math.cos(angle) * distance;
+        const destY = Math.sin(angle) * distance - (40 * Math.random());
+        p.style.left = `${x - 14}px`;
+        p.style.top = `${y - 14}px`;
+        const rotate = (Math.random() * 720) - 360;
+        requestAnimationFrame(() => {
+          p.style.transform = `translate(${destX}px, ${destY}px) rotate(${rotate}deg) scale(0.9)`;
+          p.style.opacity = '0';
+        });
+        setTimeout(() => p.remove(), 800);
+      }
+    }
+
+    // confetti
+    function spawnConfetti(centerX) {
+      const container = document.getElementById('particles');
+      const colors = ['#FFD700','#FF5C5C','#4BD37B','#4DA6FF','#D36BFF'];
+      for (let i = 0; i < 18; i++) {
+        const c = document.createElement('div');
+        c.className = 'confetti';
+        c.style.background = colors[i % colors.length];
+        c.style.left = `${centerX + (Math.random()*200 - 100)}px`;
+        c.style.top = `${-20 - Math.random()*40}px`;
+        c.style.width = `${6 + Math.random()*8}px`;
+        c.style.height = `${10 + Math.random()*12}px`;
+        c.style.opacity = '1';
+        c.style.transform = `rotate(${Math.random()*360}deg)`;
+        c.style.animation = `confettiFall ${1.4 + Math.random()*1.2}s linear forwards`;
+        container.appendChild(c);
+        setTimeout(() => c.remove(), 2600);
+      }
+    }
+
+    // level up visual
+    function showLevelUp() {
+      const el = document.getElementById('levelup');
+      el.classList.add('show');
+      playSuccessSound();
+      setTimeout(() => el.classList.remove('show'), 1400);
+    }
+
+    // سطح‌بندی ساده: وقتی سکه‌ها از threshold عبور کنه، سطح بالا میره
+    function checkLevelUp() {
+      const threshold = level * 1000; // مثال: سطح 1 -> 1000، سطح 2 -> 2000 ...
+      if (coins >= threshold) {
+        level += 1;
+        // پاداش ساده: افزایش سود و حداکثر انرژی
+        profitPerHour = Math.round(profitPerHour * 1.15);
+        maxEnergy = Math.round(maxEnergy * 1.05);
+        energy = Math.min(energy + Math.round(maxEnergy * 0.25), maxEnergy);
+        updateDisplay();
+        // confetti در مرکز کوین
+        const rect = document.getElementById('coin').getBoundingClientRect();
+        spawnConfetti(rect.left + rect.width/2);
+        showLevelUp();
+      }
+    }
+
+    // تپ روی کوین
+    function tapCoin(clientX = null, clientY = null) {
+      // resume audio on first interaction if needed
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(()=>{});
+      }
+      if (energy < energyPerTap) {
+        playLowEnergySound();
+        // ویژوال هشدار: شِیک کوچک
+        const coinEl = document.getElementById('coin');
+        coinEl.style.transform = 'translateY(-6px)';
+        setTimeout(() => coinEl.style.transform = '', 140);
+        return;
+      }
+      coins += coinsPerTap;
+      energy -= energyPerTap;
+      updateDisplay();
+      playClickSound();
+
+      const coinEl = document.getElementById('coin');
+      // pop animation
+      coinEl.classList.remove('pop');
+      void coinEl.offsetWidth;
+      coinEl.classList.add('pop');
+      setTimeout(() => coinEl.classList.remove('pop'), 300);
+
+      // particles from center of coin if coords not given
+      let x, y;
+      if (clientX !== null && clientY !== null) {
+        x = clientX;
+        y = clientY;
+      } else {
+        const rect = coinEl.getBoundingClientRect();
+        x = rect.left + rect.width/2;
+        y = rect.top + rect.height/2;
+      }
+      spawnParticles(x, y, 12);
+
+      // هر چند تپ یکبار بررسی سطح
+      checkLevelUp();
+    }
+
+    // رویدادهای تعاملی: کلیک/لمس و صفحه‌کلید
+    const coinEl = document.getElementById('coin');
+    coinEl.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      // resume audio on user gesture
+      ensureAudio();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+      tapCoin(e.clientX, e.clientY);
+    });
+    coinEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        ensureAudio();
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+        tapCoin();
+      }
+    });
+
+    // حلقهٔ یک ثانیه‌ای برای شارژ انرژی و اضافه کردن سود
+    setInterval(() => {
+      if (energy < maxEnergy) {
+        energy += energyRegenPerSecond;
+        if (energy > maxEnergy) energy = maxEnergy;
+      }
+      coins += profitPerHour / 3600;
+      updateDisplay();
+    }, 1000);
+
+    // شروع اولیه و تلگرام
+    updateDisplay();
+    if (window.Telegram?.WebApp) {
+      Telegram.WebApp.ready();
+      try { Telegram.WebApp.expand(); } catch (e) { /* ignore if not allowed */ }
+    }
+
+    // ذخیره هنگام خروج
+    window.addEventListener('beforeunload', saveState);
+
+    // کوچک: اجازهٔ فعال‌سازی صدا با اولین تعامل روی سند (برای برخی مرورگرها)
+    function unlockAudioOnFirstTouch() {
+      ensureAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(()=>{});
+      }
+      document.removeEventListener('pointerdown', unlockAudioOnFirstTouch);
+      document.removeEventListener('keydown', unlockAudioOnFirstTouch);
+    }
+    document.addEventListener('pointerdown', unlockAudioOnFirstTouch, {passive:true});
+    document.addEventListener('keydown', unlockAudioOnFirstTouch, {passive:true});
+  </script>
+</body>
+</html>
